@@ -422,7 +422,11 @@ vec3 GetColorForRay(in vec3 startRayPos, in vec3 startRayDir, inout uint rngStat
         hitInfo.fromInside = false;
 		TestSceneTrace(rayPos, rayDir, hitInfo);
 
-		if (hitInfo.dist == c_superFar) break;
+		if (hitInfo.dist == c_superFar)
+        {
+            ret = vec3(0.01f, 0.01f, 0.01f);
+            break;
+        }
 
         if (hitInfo.fromInside)
             throughput *= exp(-hitInfo.material.refractionColor * hitInfo.dist);
@@ -466,16 +470,13 @@ vec3 GetColorForRay(in vec3 startRayPos, in vec3 startRayDir, inout uint rngStat
         {
             rayProbability = 1.0f - (specularChance + refractionChance);
         }
+
         rayProbability = max(rayProbability, 0.001f);
 
         if (doRefraction == 1.0f)
-        {
             rayPos = (rayPos + rayDir * hitInfo.dist) - hitInfo.normal * c_rayPosNormalNudge;
-        }
         else
-        {
             rayPos = (rayPos + rayDir * hitInfo.dist) + hitInfo.normal * c_rayPosNormalNudge;
-        }
 
         vec3 diffuseRayDir = normalize(hitInfo.normal + RandomUnitVector(rngState));
 

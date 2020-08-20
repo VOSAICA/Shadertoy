@@ -1,7 +1,7 @@
 const float c_minimumRayHitTime = 0.1f;
 const float c_superFar = 10000.0f;
 const float c_rayPosNormalNudge = 0.01f;
-const int c_numBounces = 1;
+const int c_numBounces = 8;
 const float c_FOVDegrees = 80.0f;
 const float c_pi = 3.1415926536f;
 const float c_twopi = 2.0f * c_pi;
@@ -17,7 +17,7 @@ const float KEY_SPACE = 32.5/256.0;
 // 4 = transparent spheres of various heights, to show hot spot focus/defocus
 // 5 = transparent spheres becoming increasingly diffuse
 // 6 = transparent spheres of increasing surface roughness
-#define SCENE 1
+#define SCENE 6
 
 
 vec3 LessThan(vec3 f, float value)
