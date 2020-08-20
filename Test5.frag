@@ -46,6 +46,7 @@ struct SMaterialInfo
 SMaterialInfo GetZeroedMaterial()
 {
     SMaterialInfo ret;
+    ret.albedo = vec3(0.0f, 0.0f, 0.0f);
     ret.emissive = vec3(0.0f, 0.0f, 0.0f);
     ret.specularChance = 0.0f;
     ret.specularRoughness = 0.0f;
@@ -421,23 +422,16 @@ vec3 GetColorForRay(in vec3 startRayPos, in vec3 startRayDir, inout uint rngStat
         hitInfo.fromInside = false;
 		TestSceneTrace(rayPos, rayDir, hitInfo);
 
-		if (hitInfo.dist == c_superFar)
-        {
-            ret *= vec3(0.0f, 0.0f, 0.0f);
-            break;
-        }
+		if (hitInfo.dist == c_superFar) break;
 
         if (hitInfo.fromInside)
-        {
             throughput *= exp(-hitInfo.material.refractionColor * hitInfo.dist);
-        }
 
         float specularChance = hitInfo.material.specularChance;
         float refractionChance = hitInfo.material.refractionChance;
 
 
         float rayProbability = 1.0f;
-
         if (specularChance > 0.0f)
         {
             specularChance = FresnelReflectAmount
@@ -453,7 +447,6 @@ vec3 GetColorForRay(in vec3 startRayPos, in vec3 startRayDir, inout uint rngStat
             float chanceMultiplier = (1.0f - specularChance) / (1.0f - hitInfo.material.specularChance);
             refractionChance *= chanceMultiplier;
         }
-
 
         float doSpecular = 0.0f;
         float doRefraction = 0.0f;
@@ -475,7 +468,6 @@ vec3 GetColorForRay(in vec3 startRayPos, in vec3 startRayDir, inout uint rngStat
         }
         rayProbability = max(rayProbability, 0.001f);
 
-
         if (doRefraction == 1.0f)
         {
             rayPos = (rayPos + rayDir * hitInfo.dist) - hitInfo.normal * c_rayPosNormalNudge;
@@ -484,7 +476,6 @@ vec3 GetColorForRay(in vec3 startRayPos, in vec3 startRayDir, inout uint rngStat
         {
             rayPos = (rayPos + rayDir * hitInfo.dist) + hitInfo.normal * c_rayPosNormalNudge;
         }
-
 
         vec3 diffuseRayDir = normalize(hitInfo.normal + RandomUnitVector(rngState));
 
@@ -568,11 +559,9 @@ void main()
         rayDir = normalize(mat3(cameraRight, cameraUp, cameraFwd) * rayDir);
     }
 
-	vec3 color = vec3 (0.0f, 0.0f, 0.0f);
+	vec3 color = vec3(0.0f, 0.0f, 0.0f);
 	for (int i = 0; i < c_numRendersPerFrame; ++i)
-	{
 		color += GetColorForRay(cameraPos, rayDir, rngState) / float(c_numRendersPerFrame);
-	}
 
 	vec4 lastFrameColor = texture(iChannel0, gl_FragCoord.xy / iResolution.xy);
 
