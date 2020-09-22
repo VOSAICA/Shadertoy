@@ -58,6 +58,7 @@ float GetLight(vec3 p)
     return dif;
 }
 
+
 void main()
 {
     vec2 uv = (gl_FragCoord.xy - 0.5f * iResolution.xy) / iResolution.y;
