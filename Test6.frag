@@ -5,11 +5,14 @@ const float SURF_DIST = 0.01f;
 
 float GetDist(vec3 p)
 {
-    vec4 s = vec4(0, 1, 6, 1);
+    vec4 s = vec4(-1.0, 1, 6, 1.3);
     float sphereDist = length(p - s.xyz) - s.w;
     float planeDist = p.y;
 
-    float d = min(sphereDist, planeDist);
+    vec4 s1 = vec4(1.0, 0.5, 6, 0.9);
+    float sphereDist2 = length(p - s1.xyz) - s1.w;
+
+    float d = min(sphereDist, min(planeDist, sphereDist2));
     return d;
 }
 
@@ -54,7 +57,7 @@ float GetLight(vec3 p)
     float dif = clamp(dot(n, l), 0.0f, 1.0f);
 
     float d = RayMarch(p + n * SURF_DIST * 2.0f, l);
-    if (d < length(lightPos - p))   dif*=0.1;
+    if (d < length(lightPos - p))    dif*=0.1;
     return dif;
 }
 
