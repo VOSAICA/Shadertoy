@@ -56,6 +56,11 @@ float GetLight(vec3 p)
 
     float dif = clamp(dot(n, l), 0.0f, 1.0f);
 
+    if (p.y < 0.1)//floor color
+    {
+        dif -= float((int(p.x+100.0) % 2) ^ (int(p.z+100.0)) % 2) * 0.1;
+    }
+
     float d = RayMarch(p + n * SURF_DIST * 2.0f, l);
     if (d < length(lightPos - p))    dif*=0.1;
     return dif;
