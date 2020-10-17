@@ -523,8 +523,8 @@ void GetCameraVectors(out vec3 cameraPos, out vec3 cameraFwd, out vec3 cameraUp,
         return;
     }
 
-    float angleX = -mouse.x * 16.0f / float(iResolution.x);
-    float angleY = mix(c_minCameraAngle, c_maxCameraAngle, mouse.y / float(iResolution));
+    float angleX = -mouse.x * 16.0f * 5.0f / float(iResolution.x);
+    float angleY = mix(c_minCameraAngle, c_maxCameraAngle, mouse.y * 5.0f / float(iResolution));
 
     cameraPos.x = sin(angleX) * sin(angleY) * c_cameraDistance;
     cameraPos.y = -cos(angleY) * c_cameraDistance;
