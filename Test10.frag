@@ -4,8 +4,83 @@ const float SURF_DIST = 0.01f;
 const float eps = 0.001f;
 
 
+float rand2D(float st)
+{
+    return (fract(sin(st) * 100000.0));
+}
+
+
+float rand2D(vec2 st)
+{
+    return fract(sin(dot(st.xy, vec2(12.9898, 78.223))) * 43758.5453123);
+}
+
+
+float perlinNoise(float st)
+{
+    return rand2D(floor(st));
+}
+
+
+float noise(float st)
+{
+    return mix(rand2D(st), rand2D(st + 1.0), smoothstep(0.0, 1.0, fract(st)));
+}
+
+
+float noise2D(vec2 st)
+{
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    // Four corners in 2D of a tile
+    float a = rand2D(i);
+    float b = rand2D(i + vec2(1.0, 0.0));
+    float c = rand2D(i + vec2(0.0, 1.0));
+    float d = rand2D(i + vec2(1.0, 1.0));
+
+    // Smooth Interpolation
+
+    // Cubic Hermine Curve.  Same as SmoothStep()
+    vec2 u = smoothstep(0.,1.,f);
+
+    // Mix 4 coorners percentages
+    return mix(a, b, u.x) +
+            (c - a)* u.y * (1.0 - u.x) +
+            (d - b) * u.x * u.y;
+}
+
+
+float fbm(vec2 st, float H)
+{
+#if 0
+    float t = 0.0;
+    for(int i = 0; i < 10; i++)
+    {
+        float f = pow(2.0, float(i));
+        float a = pow(f, -3.0);
+        t += a * noise2D(f * st);
+    }
+    return t;
+#else
+    float G = exp2(-H);
+    float f = 1.0;
+    float a = 1.0;
+    float t = 0.0;
+    for( int i=0; i<7; i++ )
+    {
+        t += a*noise2D(f*st);
+        f *= 2.0;
+        a *= G;
+    }
+    return t;
+#endif
+}
+
+
 float f(float x, float z)
 {
+    return fbm(vec2(x, z), 1.0);
     return cos(((x + iTime)*10.0 + cos(z*10.0)) * 0.5);
 }
 
@@ -110,7 +185,6 @@ vec3 GetNormal(vec3 p)
                             f(p.x,p.z-eps) - f(p.x,p.z+eps) ) );
 #endif
 }
-
 
 
 vec3 GetLight(vec3 ro, vec3 rd, out float resT)
