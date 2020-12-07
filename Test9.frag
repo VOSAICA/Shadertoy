@@ -1,4 +1,4 @@
-float rand2D(float st)
+float rand(float st)
 {
     return (fract(sin(st) * 100000.0));
 }
@@ -12,13 +12,13 @@ float rand2D(vec2 st)
 
 float perlinNoise(float st)
 {
-    return rand2D(floor(st));
+    return rand(floor(st));
 }
 
 
 float noise(float st)
 {
-    return mix(rand2D(st), rand2D(st + 1.0), smoothstep(0.0, 1.0, fract(st)));
+    return mix(rand(st), rand(st + 1.0), smoothstep(0.0, 1.0, fract(st)));
 }
 
 
@@ -45,6 +45,21 @@ float noise2D(vec2 st)
 }
 
 
+float noiseGrid(vec2 st)
+{
+    st*=10.0;
+    vec2 ipos = floor(st);  // get the integer coords
+    vec2 fpos = fract(st);
+    return rand2D(ipos);
+}
+
+
+float noiseGrad(vec2 st)
+{
+    return 0.0;
+}
+
+
 float fbm(vec2 st, float H)
 {
 #if 0
@@ -61,7 +76,7 @@ float fbm(vec2 st, float H)
     float f = 1.0;
     float a = 1.0;
     float t = 0.0;
-    for( int i=0; i<7; i++ )
+    for(int i=0; i<8; i++)
     {
         t += a*noise2D(f*st);
         f *= 2.0;

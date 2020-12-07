@@ -4,7 +4,7 @@ const float SURF_DIST = 0.01f;
 const float eps = 0.001f;
 
 
-float rand2D(float st)
+float rand(float st)
 {
     return (fract(sin(st) * 100000.0));
 }
@@ -18,13 +18,13 @@ float rand2D(vec2 st)
 
 float perlinNoise(float st)
 {
-    return rand2D(floor(st));
+    return rand(floor(st));
 }
 
 
 float noise(float st)
 {
-    return mix(rand2D(st), rand2D(st + 1.0), smoothstep(0.0, 1.0, fract(st)));
+    return mix(rand(st), rand(st + 1.0), smoothstep(0.0, 1.0, fract(st)));
 }
 
 
@@ -51,6 +51,14 @@ float noise2D(vec2 st)
 }
 
 
+float noiseGrid(vec2 st)
+{
+    st*=0.5;
+    vec2 ipos = floor(st);  // get the integer coords
+    return rand2D(ipos);
+}
+
+
 float fbm(vec2 st, float H)
 {
 #if 0
@@ -67,7 +75,7 @@ float fbm(vec2 st, float H)
     float f = 1.0;
     float a = 1.0;
     float t = 0.0;
-    for( int i=0; i<7; i++ )
+    for(int i=0; i<6; i++)
     {
         t += a*noise2D(f*st);
         f *= 2.0;
@@ -80,7 +88,8 @@ float fbm(vec2 st, float H)
 
 float f(float x, float z)
 {
-    return fbm(vec2(x, z), 1.0);
+    return fbm(vec2(x, z), 7.0);
+    return noiseGrid(vec2(x, z + iTime * 3.)) * 1.5;
     return cos(((x + iTime)*10.0 + cos(z*10.0)) * 0.5);
 }
 
@@ -114,7 +123,7 @@ float RayMarch(vec3 ro, vec3 rd)
 }
 
 
-bool castRay(vec3 ro, vec3 rd, out float resT)
+bool castRay(vec3 ro, vec3 rd, out float resT, inout float height)
 {
     float dt = 0.01f;
     const float mint = 0.001f;
@@ -125,6 +134,7 @@ bool castRay(vec3 ro, vec3 rd, out float resT)
     {
         vec3 p = ro + rd * t;
         float h = f(p.x, p.z);
+        height = h;
 
         if (p.y < h)
         {
@@ -190,8 +200,8 @@ vec3 GetNormal(vec3 p)
 vec3 GetLight(vec3 ro, vec3 rd, out float resT)
 {
     vec3 p = ro + rd * resT;
-    vec3 lightPos =  vec3(-100, 30, -60);
-    lightPos.xz += vec2(sin(iTime),cos(iTime))*5.0;
+    vec3 lightPos =  vec3(-10, 15, -25);
+    //lightPos.xz += vec2(sin(iTime),cos(iTime))*5.0;
     vec3 l = normalize(lightPos - p);
     vec3 n = GetNormal(p);
 
@@ -201,22 +211,24 @@ vec3 GetLight(vec3 ro, vec3 rd, out float resT)
     if (castShadow(p, lightPos, T)) dif*= T;
     //float d = RayMarch(p + n * SURF_DIST * 2.0f, l);
     //if (d < length(lightPos - p))    dif*=0.1;
-    return dif * vec3(1.0, 1.0, 1.0);
+    return dif * vec3(1.0);
 }
 
 
 void main()
 {
     vec2 uv = (gl_FragCoord.xy - 0.5f * iResolution.xy) / iResolution.y;
-    vec3 color = vec3(0);
+    vec3 color = vec3(1.0, 0.83, 0.4);
 
-    vec3 ro = vec3(-0.3, 3.0, 2.0);
-    vec3 rd = normalize(vec3(uv.x, uv.y - 0.5, 1.0f));
+    vec3 ro = vec3(uv.x + 10., uv.y + 2.6, 2.0);
+    vec3 rd = normalize(vec3(uv.x, uv.y, 1.0f));
 
     float t;
-
-    if (castRay(ro, rd, t))  color = vec3(GetLight(ro, rd, t));
-    else  color = vec3(0.0, 0.0, 0.0);
+    float h;
+    if (castRay(ro, rd, t, h))
+    {
+        color = vec3(GetLight(ro, rd, t) * vec3(cos(h * 0.5)));
+    }
 
     gl_FragColor = vec4(color, 1.0);
 }

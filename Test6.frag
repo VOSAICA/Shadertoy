@@ -2,8 +2,12 @@ const int MAX_STEPS = 100;
 const float MAX_DIST = 100.0f;
 const float SURF_DIST = 0.01f;
 
+vec4 MinD(vec4 a, vec4 b)
+{
+    return a.x < b.x?a:b;
+}
 
-float GetDist(vec3 p)
+vec4 GetDist(vec3 p)
 {
     vec4 s = vec4(-1.0, 1, 6, 1.3);
     float sphereDist = length(p - s.xyz) - s.w;
@@ -12,7 +16,12 @@ float GetDist(vec3 p)
     vec4 s1 = vec4(1.0, 0.5, 6, 0.9);
     float sphereDist2 = length(p - s1.xyz) - s1.w;
 
-    float d = min(sphereDist, min(planeDist, sphereDist2));
+    vec4 d = vec4(1e10, 0.0, 0.0, 0.0);
+    d = MinD(d, vec4(sphereDist, 1.0, 0.83, 0.4));
+    d = MinD(d, vec4(planeDist, 1.0, 1.0, 1.0));
+    d = MinD(d, vec4(sphereDist2, 0, 0, 1));
+
+    //float d = min(sphereDist, min(planeDist, sphereDist2));
     return d;
 }
 
@@ -23,7 +32,7 @@ float RayMarch(vec3 ro, vec3 rd)
     for (int i = 0; i < MAX_STEPS; i++)
     {
         vec3 p = ro + rd * d0;
-        float ds = GetDist(p);
+        float ds = GetDist(p).x;
         d0+=ds;
 
         if (d0 > MAX_DIST || ds < SURF_DIST)    break;
@@ -32,29 +41,34 @@ float RayMarch(vec3 ro, vec3 rd)
 }
 
 
-vec3 GetNormal(vec3 p)
+vec3 GetNormal(vec3 p, out vec3 c)
 {
-    float d = GetDist(p);
+    vec4 al = GetDist(p);
     vec2 e = vec2(0.01f, 0.0f);
+
+    float d = al.x;
+    c = al.yzw;
 
     vec3 n = d - vec3
     (
-        GetDist(p - e.xyy),
-        GetDist(p - e.yxy),
-        GetDist(p - e.yyx)
+        GetDist(p - e.xyy).x,
+        GetDist(p - e.yxy).x,
+        GetDist(p - e.yyx).x
     );
     return normalize(n);
 }
 
 
-float GetLight(vec3 p)
+vec3 GetLight(vec3 p)
 {
-    vec3 lightPos = vec3(0, 5, 6);
-    lightPos.xz += vec2(sin(iTime),cos(iTime))*2.0;
+    vec3 lightPos = vec3(0, 5, 3.5);
+    //lightPos.xz += vec2(sin(iTime),cos(iTime))*2.0;
     vec3 l = normalize(lightPos - p);
-    vec3 n = GetNormal(p);
+    vec3 c = vec3(0);
+    vec3 n = GetNormal(p, c);
 
-    float dif = clamp(dot(n, l), 0.0f, 1.0f);
+    float nDot = 0.5 * dot(n, l) + 0.5;
+    vec3 dif = vec3(1.0, 1.0, 0.9) * c * clamp(nDot, 0.0, 1.0);
 
     if (p.y < 0.1)//floor color
     {
@@ -62,7 +76,7 @@ float GetLight(vec3 p)
     }
 
     float d = RayMarch(p + n * SURF_DIST * 2.0f, l);
-    if (d < length(lightPos - p))    dif*=0.1;
+    //if (d < length(lightPos - p))    dif-=0.1;
     return dif;
 }
 
@@ -70,7 +84,7 @@ float GetLight(vec3 p)
 void main()
 {
     vec2 uv = (gl_FragCoord.xy - 0.5f * iResolution.xy) / iResolution.y;
-    vec3 color = vec3(0);
+    vec3 color = vec3(1.0);
 
     vec3 ro = vec3(0, 1, 0);
     vec3 rd = normalize(vec3(uv.x, uv.y, 1.0f));
@@ -78,8 +92,8 @@ void main()
     float d = RayMarch(ro, rd);
 
     vec3 p = ro + rd * d;
-    float dif = GetLight(p);
+    vec3 dif = GetLight(p);
 
-    color = vec3(dif);
+    color = dif;
     gl_FragColor = vec4(color, 1.0);
 }
