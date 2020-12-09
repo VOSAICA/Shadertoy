@@ -1,4 +1,4 @@
-#define HALF_LAMBERT
+//#define HALF_LAMBERT
 #define FLOOR_GRID
 
 const int MAX_STEPS = 100;
@@ -55,16 +55,32 @@ float sdBox( vec3 p, vec3 b )
 }
 
 
+float sdOctahedron( vec3 p, float s)
+{
+  p = abs(p);
+  float m = p.x+p.y+p.z-s;
+  vec3 q;
+       if( 3.0*p.x < m ) q = p.xyz;
+  else if( 3.0*p.y < m ) q = p.yzx;
+  else if( 3.0*p.z < m ) q = p.zxy;
+  else return m*0.57735027;
+    
+  float k = clamp(0.5*(q.z-q.y+s),0.0,s); 
+  return length(vec3(q.x,q.y-s+k,q.z-k)); 
+}
+
+
 vec4 getDist(vec3 p)
 {
     vec4 d = vec4(1e10, 0.0, 0.0, 0.0);
     mat3x3 rotateX = rotateX(iTime);
     mat3x3 rotateY = rotateY(iTime);
 
-    d = minDist(d, vec4(sdSphere(p-vec3(-1, 0.5, 1.5), 0.5), 1.0, 0.83, 0.4));
+    d = minDist(d, vec4(sdSphere(p - vec3(-1, -0.5, 2.0), 0.5), 1.0, 0.83, 0.4));
     d = minDist(d, vec4(sdPlane(p), 1.0, 1.0, 1.0));
-    d = minDist(d, vec4(sdBox(rotateX * rotateY * p - rotateX * rotateY * vec3(0.6, 0.5, 2), vec3(0.4, 0.4, 0.4)), 0.5, 0.5, 1));
-    //d = minDist(d, vec4(sdBox(p - vec3(1, 0.5, 2), vec3(0.5, 0.5, 0.5)), 0.5, 0.5, 1));
+    d = minDist(d, vec4(sdOctahedron(p - vec3(3, cos(iTime), -1.0), 1.0), 0.5, 0.2, 0.6));
+    //d = minDist(d, vec4(sdBox(p - vec3(1, -0.5, 2), vec3(0.5, 0.5, 0.5)), 0.5, 0.5, 1));
+    d = minDist(d, vec4(sdBox(rotateX * rotateY * p - rotateX * rotateY * vec3(0.6, 0.5, 2), vec3(0.6, 0.6, 0.6)), 0.5, 0.5, 1));
     return d;
 }
 
@@ -107,7 +123,7 @@ float shadow(in vec3 ro, in vec3 rd, float mint, float maxt)
     for(float t = mint; t < maxt;)
     {
         float h = getDist(ro + rd * t).x;
-        if(h <0.5)  return 0.3;
+        if(h <0.001)  return 0.4;
         t += h;
     }
     return 1.0;
@@ -119,27 +135,12 @@ float softshadow(in vec3 ro, in vec3 rd, float mint, float maxt, float k)
     float res = 1.0;
     for (float t=mint; t<maxt;)
     {
-        float h = getDist(ro + rd * t).x;
-        if (h < 0.01)
-            return 0.0;
-        res = min(res, k * (h / t));
-        t += h;
+        float d = getDist(ro + rd * t).x;
+        if (d < 0.001)  return 0.0;
+        res = min(res, k * (d / t));
+        t += d;
     }
     return res;
-}
-
-
-float softshadow2(in vec3 ro, in vec3 rd)
-{
-    for (float t = 0.01; t < 30.0;)
-    {
-        float d = getDist(ro + rd * t).x;
-        if (d < 0.01)
-        {
-
-        }
-    }
-    return 0.0;
 }
 
 
@@ -149,15 +150,16 @@ vec3 render(vec3 ro, vec3 rd, vec2 uv)
     float d = rayMarch(ro, rd);
     vec3 p = ro + rd * d;
 
-    if (d > 80.0)
+    if (d > 50.0)
     {
-        //dif = vec3(0.7, 0.7, 0.9) - max(rd.y,0.0)*0.3;
-        dif = clamp(normalize(vec3(98, 146, 226)) * uv.y + 0.1 * 4.5, 0.0, 1.0); //Sky color
+        dif = vec3(0.38, 0.57, 0.88) - max(rd.y,0.0)*0.8;
+        //dif = clamp(normalize(vec3(98, 146, 226)) * uv.y + 0.1 * 4.5, 0.0, 1.0); //Sky color
         return dif;
     }
 
-    vec3 lightPos = vec3(5, 3, 5);
-    //lightPos *= rotateY(iTime);
+    vec3 lightPos = vec3(5, 10, 5);
+    lightPos.x += cos(iTime) * 8.0;
+    lightPos.z += sin(iTime) * 8.0;
 
     vec3 l = normalize(lightPos - p);
     vec3 c = vec3(1.0);
@@ -172,17 +174,14 @@ vec3 render(vec3 ro, vec3 rd, vec2 uv)
     dif = vec3(1.0, 1.0, 0.9) * c * clamp(nDot, 0.0, 1.0);
 
     #ifdef FLOOR_GRID
-    if (p.y < 0.01)//floor color
+    if (p.y < -0.90)//floor color
     {
         dif -= float((int(p.x+100.0) % 2) ^ (int(p.z+100.0)) % 2) * 0.1;
     }
     #endif
 
-    //dif *= shadow(p, lightPos - p, 0.02, 10.0);
-    //dif *= softshadow(p, lightPos - p, 0.02, 15.0, 0.05);
-
-    //float d2 = rayMarch(p + n * SURF_DIST * 2.0f, l);
-    //if (d2 < length(lightPos - p) && p.y < 2.0)    dif*=0.3;
+    //dif *= shadow(p, l, 0.2, 5.0);
+    dif *= softshadow(p, l, 0.2, 5.0, 16.0);
 
     return dif;
 }
@@ -190,25 +189,21 @@ vec3 render(vec3 ro, vec3 rd, vec2 uv)
 
 void main()
 {
-    mat3x3 rotateX = rotateX(-iMouse.x / 50.0);
-    mat3x3 rotateY = rotateY(iMouse.y / 50.0);
+    mat3x3 rotateX = rotateX((-iMouse.x / iResolution.x) * 20.0);
+    mat3x3 rotateY = rotateY((iMouse.y / iResolution.y) * 2.0);
 
     vec2 uv2 = (gl_FragCoord.xy - 0.5f * iResolution.xy) / iResolution.y;
     vec3 uv = vec3(uv2, 1.0);
-
     vec3 cameraP = vec3(0.0, 0.0, 0.0);
-
-    vec3 cameraDir = vec3(0.0, 0.0, 0.0);
 
     uv = rotateX * rotateY * uv;
     cameraP = rotateX * rotateY * cameraP;
 
-
-    vec3 trs = vec3(cos(iTime / 10.) * 4.0, 0, sin(iTime / 10.) * 4.0) + vec3(0, 0, -2);
+    vec3 trs = vec3(-4.0 * sin(iTime), 0, -4.0 * cos(iTime));
 
     cameraP += trs;
     uv += trs;
-    vec3 rd = uv - cameraP;
+    vec3 rd = normalize(uv - cameraP);
 
     vec3 color = render(cameraP, rd, uv.xy);
     gl_FragColor = vec4(color, 1.0);
