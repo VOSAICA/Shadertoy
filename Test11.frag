@@ -1,4 +1,4 @@
-//#define HALF_LAMBERT
+#define HALF_LAMBERT
 #define FLOOR_GRID
 
 const int MAX_STEPS = 100;
@@ -64,7 +64,7 @@ float sdOctahedron( vec3 p, float s)
   else if( 3.0*p.y < m ) q = p.yzx;
   else if( 3.0*p.z < m ) q = p.zxy;
   else return m*0.57735027;
-    
+
   float k = clamp(0.5*(q.z-q.y+s),0.0,s); 
   return length(vec3(q.x,q.y-s+k,q.z-k)); 
 }
@@ -100,7 +100,7 @@ float rayMarch(vec3 ro, vec3 rd)
 }
 
 
-vec3 GetNormal(vec3 p, out vec3 c)
+vec3 getNormal(vec3 p, out vec3 c)
 {
     vec4 al = getDist(p);
     vec2 e = vec2(0.01f, 0.0f);
@@ -132,15 +132,32 @@ float shadow(in vec3 ro, in vec3 rd, float mint, float maxt)
 
 float softshadow(in vec3 ro, in vec3 rd, float mint, float maxt, float k)
 {
+    #if 0
     float res = 1.0;
     for (float t=mint; t<maxt;)
     {
         float d = getDist(ro + rd * t).x;
-        if (d < 0.001)  return 0.0;
-        res = min(res, k * (d / t));
+        if (d < 0.001)  return 0.3;
+        res = max(0.3, min(res, k * (d / t)));
         t += d;
     }
     return res;
+    #else
+    float res = 1.0;
+    float ph = 1e20;
+    for( float t=mint; t<maxt; )
+    {
+        float h = getDist(ro + rd * t).x;
+        if(h<0.001)
+            return 0.3;
+        float y = h*h/(2.0*ph);
+        float d = sqrt(h*h-y*y);
+        res = max(0.3, min(res, k * d / max(0.0, t - y)));
+        ph = h;
+        t += h;
+    }
+    return res;
+    #endif
 }
 
 
@@ -157,13 +174,13 @@ vec3 render(vec3 ro, vec3 rd, vec2 uv)
         return dif;
     }
 
-    vec3 lightPos = vec3(5, 10, 5);
+    vec3 lightPos = vec3(2, 15, 2);
     lightPos.x += cos(iTime) * 8.0;
     lightPos.z += sin(iTime) * 8.0;
 
     vec3 l = normalize(lightPos - p);
     vec3 c = vec3(1.0);
-    vec3 n = GetNormal(p, c);
+    vec3 n = getNormal(p, c);
 
     #ifdef HALF_LAMBERT
     float nDot = 0.5 * dot(n, l) + 0.5;
@@ -181,7 +198,7 @@ vec3 render(vec3 ro, vec3 rd, vec2 uv)
     #endif
 
     //dif *= shadow(p, l, 0.2, 5.0);
-    dif *= softshadow(p, l, 0.2, 5.0, 16.0);
+    dif *= softshadow(p, l, 0.05, 10.0, 8.0);
 
     return dif;
 }
@@ -199,7 +216,7 @@ void main()
     uv = rotateX * rotateY * uv;
     cameraP = rotateX * rotateY * cameraP;
 
-    vec3 trs = vec3(-4.0 * sin(iTime), 0, -4.0 * cos(iTime));
+    vec3 trs = vec3(0, 0, -2);
 
     cameraP += trs;
     uv += trs;
