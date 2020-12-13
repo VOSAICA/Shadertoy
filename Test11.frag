@@ -191,14 +191,16 @@ vec3 render(vec3 ro, vec3 rd, vec2 uv)
     dif = vec3(1.0, 1.0, 0.9) * c * clamp(nDot, 0.0, 1.0);
 
     #ifdef FLOOR_GRID
-    if (p.y < -0.90)//floor color
+    if (p.y < -0.98 || abs(p.x)> 20.0 || abs(p.z) > 20.0)//floor color
     {
         dif -= float((int(p.x+100.0) % 2) ^ (int(p.z+100.0)) % 2) * 0.1;
+        dif *= softshadow(p, l, 0.02, 10.0, 6.0);
+    }
+    else
+    {
+        //dif *= shadow(p, l, 0.1, 5.0);
     }
     #endif
-
-    //dif *= shadow(p, l, 0.2, 5.0);
-    dif *= softshadow(p, l, 0.05, 10.0, 8.0);
 
     return dif;
 }

@@ -70,7 +70,7 @@ vec3 GetLight(vec3 p)
     float nDot = 0.5 * dot(n, l) + 0.5;
     vec3 dif = vec3(1.0, 1.0, 0.9) * c * clamp(nDot, 0.0, 1.0);
 
-    if (p.y < 0.1)//floor color
+    if (p.y < 0.01)//floor color
     {
         dif -= float((int(p.x+100.0) % 2) ^ (int(p.z+100.0)) % 2) * 0.1;
     }
