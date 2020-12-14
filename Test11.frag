@@ -183,7 +183,7 @@ vec3 render(vec3 ro, vec3 rd, vec2 uv)
     vec3 n = getNormal(p, c);
 
     #ifdef HALF_LAMBERT
-    float nDot = 0.5 * dot(n, l) + 0.5;
+    float nDot = pow(0.5 * dot(n, l) + 0.5, 2.0);
     #else
     float nDot = dot(n, l);
     #endif
@@ -198,9 +198,10 @@ vec3 render(vec3 ro, vec3 rd, vec2 uv)
     }
     else
     {
-        //dif *= shadow(p, l, 0.1, 5.0);
+        dif *= shadow(p, l, 0.06, 5.0);
     }
     #endif
+        //dif *= softshadow(p, l, 0.07, 10.0, 6.0);
 
     return dif;
 }
@@ -224,6 +225,6 @@ void main()
     uv += trs;
     vec3 rd = normalize(uv - cameraP);
 
-    vec3 color = render(cameraP, rd, uv.xy);
+    vec3 color = render(cameraP, rd, uv2);
     gl_FragColor = vec4(color, 1.0);
 }
