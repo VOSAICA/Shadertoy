@@ -78,9 +78,9 @@ vec4 getDist(vec3 p)
 
     d = minDist(d, vec4(sdSphere(p - vec3(-1, -0.5, 2.0), 0.5), 1.0, 0.83, 0.4));
     d = minDist(d, vec4(sdPlane(p), 1.0, 1.0, 1.0));
-    d = minDist(d, vec4(sdOctahedron(p - vec3(3, cos(iTime), -1.0), 1.0), 0.5, 0.2, 0.6));
+    d = minDist(d, vec4(sdOctahedron(p - vec3(3, cos(iTime), 0.0), 1.0), 0.5, 0.2, 0.6));
     //d = minDist(d, vec4(sdBox(p - vec3(1, -0.5, 2), vec3(0.5, 0.5, 0.5)), 0.5, 0.5, 1));
-    d = minDist(d, vec4(sdBox(rotateX * rotateY * p - rotateX * rotateY * vec3(0.6, 0.5, 2), vec3(0.6, 0.6, 0.6)), 0.5, 0.5, 1));
+    d = minDist(d, vec4(sdBox(rotateX * rotateY * p - rotateX * rotateY * vec3(0.6, 0., 1), vec3(0.6, 0.6, 0.6)), 0.5, 0.5, 1));
     return d;
 }
 
@@ -99,10 +99,26 @@ float rayMarch(vec3 ro, vec3 rd)
     return d0;
 }
 
+/*
+float ReflectRayMarching(vec3 ro, vec3 rd)
+{
+    ro += rd * 2;
+    for (int step = 0; step < 128; step++)
+    {
+        float d = Scene(ro);
+        if (d < 0.01)
+        {
+            return ReflectLighting(ro, rd);
+        }
+        ro += rd * d;
+    }
+    return float4(0.2, 0.3, 0.2, 0);
+}*/
+
 
 vec3 getNormal(vec3 p, out vec3 c)
 {
-    #if 0
+    #if 1
     vec4 al = getDist(p);
     vec2 e = vec2(0.01f, 0.0f);
 
@@ -146,7 +162,7 @@ float shadow(in vec3 ro, in vec3 rd, float mint, float maxt)
 
 float softshadow(in vec3 ro, in vec3 rd, float mint, float maxt, float k)
 {
-    #if 1
+    #if 0
     float res = 1.0;
     for (float t = mint; t < maxt;)
     {
@@ -187,16 +203,34 @@ float halfLambert(vec3 n, vec3 l)
 }
 
 
-float blinPhong(vec3 n, vec3 l, vec3 v, float k)
+float phong(vec3 n, vec3 l, vec3 v, float kp, float ks)
 {
-    vec3 h = normalize(v + l);
-    float nh = saturate(dot(n,h));
+    vec3 r = reflect(-l,n);
+    float vr = saturate(dot(v,r));
     float nl = saturate(dot(n,l));
-    float specular = pow(nh, k) * k;
+    float specular = pow(vr,kp) * ks;
     float diffuse = nl;
     return specular + diffuse;
 }
 
+
+float blinPhong(vec3 n, vec3 l, vec3 v, float kp, float ks)
+{
+    vec3 h = normalize(v + l);
+    float nh = saturate(dot(n,h));
+    float nl = saturate(dot(n,l));
+    float specular = pow(nh, kp) * ks;
+    float diffuse = nl;
+    return specular + diffuse;
+}
+
+
+vec3 lightPos()
+{
+    vec3 lightPos = vec3(20, 30, 0);
+    lightPos *= rotateX(iTime);
+    return lightPos;
+}
 
 vec3 render(vec3 ro, vec3 rd, vec2 uv)
 {
@@ -206,36 +240,35 @@ vec3 render(vec3 ro, vec3 rd, vec2 uv)
 
     if (d > 50.0)
     {
-        dif = vec3(0.38, 0.57, 0.88) - max(rd.y,0.0)*0.8;
+        dif = vec3(0.38, 0.57, 0.98) - max(rd.y,0.0)*0.90;
         //dif = clamp(normalize(vec3(98, 146, 226)) * uv.y + 0.1 * 4.5, 0.0, 1.0); //Sky color
         return dif;
     }
 
-    vec3 lightPos = vec3(2, 15, 2);
-    lightPos.x += cos(iTime) * 8.0;
-    lightPos.z += sin(iTime) * 8.0;
+    vec3 lightPos = lightPos();
 
     vec3 l = normalize(lightPos - p);
-    vec3 c = vec3(1.0);
-    vec3 n = getNormal(p, c);
+    vec3 c;
+    vec3 n = normalize(getNormal(p, c));
 
     //float nDot = halfLambert(n, l);
-    float nDot = blinPhong(n, l, ro - p, 64.0);
+    float nDot = blinPhong(n, l, -rd, 64.0, 0.1);
+    //float nDot = phong(n, l, -rd, 64.0, 0.1);
 
     dif = c * clamp(nDot, 0.0, 1.0);
-
+    //dif = n;
     #ifdef FLOOR_GRID
     if (p.y < -0.98 || abs(p.x)> 20.0 || abs(p.z) > 20.0)//floor color
     {
         dif -= float((int(p.x+100.0) % 2) ^ (int(p.z+100.0)) % 2) * 0.1;
-        //dif *= softshadow(p, l, 0.02, 10.0, 8.0);
+        dif *= softshadow(p, l, 0.02, 10.0, 8.0);
     }
     else
     {
-        //dif *= shadow(p, l, 0.06, 5.0);
+        //dif *= shadow(p, l, 0.02, 5.0);
+        dif *= softshadow(p, l, 0.06, 10.0, 8.0);
     }
     #endif
-    //dif *= softshadow(p, l, 0.08, 10.0, 8.0);
 
     return dif;
 }
